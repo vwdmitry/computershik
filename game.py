@@ -1,6 +1,15 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 import random, json, os
+
+# Пытаемся использовать ttkbootstrap для красивого интерфейса
+try:
+    import ttkbootstrap as tb
+    from ttkbootstrap.constants import *
+    HAS_BOOTSTRAP = True
+except ImportError:
+    HAS_BOOTSTRAP = False
+    from tkinter import ttk
 
 try:
     import winsound
@@ -11,28 +20,25 @@ except ImportError:
 SAVE_FILE = "savegame.json"
 SCORES_FILE = "scores.json"
 
-# ============ КАТАЛОГ КОМПЛЕКТУЮЩИХ ============
+# ============ КАТАЛОГ КОМПЛЕКТУЮЩИХ (без изменений) ============
 MOTHERBOARDS = [
     {"id": "mb_budget", "name": "ASRock H510M",  "socket": "LGA1200", "ram": "DDR4", "max_gpu": 1, "price": 2500,  "power": 30},
     {"id": "mb_mid",    "name": "MSI B550M",     "socket": "AM4",     "ram": "DDR4", "max_gpu": 2, "price": 5500,  "power": 35},
     {"id": "mb_high",   "name": "ASUS Z690",     "socket": "LGA1700", "ram": "DDR5", "max_gpu": 3, "price": 12000, "power": 40},
     {"id": "mb_mining", "name": "Mining B250",   "socket": "LGA1200", "ram": "DDR4", "max_gpu": 6, "price": 15000, "power": 45},
 ]
-
 CPUS = [
     {"id": "cpu_cel",    "name": "Celeron G5905",  "socket": "LGA1200", "price": 500,   "power": 58},
     {"id": "cpu_ryzen3", "name": "Ryzen 3 3200G",  "socket": "AM4",     "price": 4000,  "power": 65},
     {"id": "cpu_ryzen5", "name": "Ryzen 5 5600",   "socket": "AM4",     "price": 8000,  "power": 65},
     {"id": "cpu_i5",     "name": "Core i5-12400",  "socket": "LGA1700", "price": 12000, "power": 65},
 ]
-
 RAMS = [
     {"id": "ram_ddr4_8",  "name": "DDR4 8GB",  "type": "DDR4", "price": 1550,  "power": 5},
     {"id": "ram_ddr4_16", "name": "DDR4 16GB", "type": "DDR4", "price": 3000,  "power": 8},
     {"id": "ram_ddr5_16", "name": "DDR5 16GB", "type": "DDR5", "price": 6000,  "power": 10},
     {"id": "ram_ddr5_32", "name": "DDR5 32GB", "type": "DDR5", "price": 12000, "power": 15},
 ]
-
 PSUS = [
     {"id": "psu_500",  "name": "500W Bronze",     "wattage": 500,  "price": 3500},
     {"id": "psu_750",  "name": "750W Gold",       "wattage": 750,  "price": 6500},
@@ -40,7 +46,6 @@ PSUS = [
     {"id": "psu_1200", "name": "1200W Platinum",  "wattage": 1200, "price": 18000},
     {"id": "psu_1500", "name": "1500W Titanium",  "wattage": 1500, "price": 25000},
 ]
-
 GPUS = [
     {"id": "gpu_1660", "name": "GTX 1660 Super", "hashrate": 30,  "price": 15000,  "power": 125},
     {"id": "gpu_3060", "name": "RTX 3060",       "hashrate": 35,  "price": 25000,  "power": 130},
@@ -48,8 +53,6 @@ GPUS = [
     {"id": "gpu_4070", "name": "RTX 4070",       "hashrate": 65,  "price": 55000,  "power": 200},
     {"id": "gpu_4090", "name": "RTX 4090",       "hashrate": 130, "price": 150000, "power": 450},
 ]
-
-# ============ ЗВУК И ИКОНКА ============
 
 def click_sound():
     if HAS_SOUND:
@@ -74,42 +77,32 @@ def make_icon(root):
     root.iconphoto(True, icon)
 
 
-class StartMenu:
-    def __init__(self, root, on_start, on_continue, on_scores):
-        self.root = root
-        self.frame = tk.Frame(root, bg="#1e1e2e")
-        self.frame.pack(fill="both", expand=True)
-        tk.Label(self.frame, text="КОМПЬЮТЕРЩИК 2.0", font=("Consolas", 28, "bold"),
-                 bg="#1e1e2e", fg="#cdd6f4").pack(pady=(60, 5))
-        tk.Label(self.frame, text="Сборка фермы: совместимость, мощность, реальные цены",
-                 font=("Consolas", 12), bg="#1e1e2e", fg="#a6adc8").pack(pady=(0, 25))
-
-        has_save = os.path.exists(SAVE_FILE)
-        tk.Button(self.frame, text="НОВАЯ ИГРА", command=on_start, bg="#89b4fa", fg="#1e1e2e",
-                  font=("Consolas", 14, "bold"), relief="flat", padx=30, pady=12, cursor="hand2").pack(pady=6)
-        btn = tk.Button(self.frame, text="ПРОДОЛЖИТЬ", command=on_continue, bg="#a6e3a1", fg="#1e1e2e",
-                        font=("Consolas", 14, "bold"), relief="flat", padx=30, pady=12, cursor="hand2")
-        if has_save:
-            btn.pack(pady=6)
-        else:
-            btn.config(state="disabled", bg="#313244", fg="#585b70"); btn.pack(pady=6)
-        tk.Button(self.frame, text="РЕКОРДЫ", command=on_scores, bg="#f9e2af", fg="#1e1e2e",
-                  font=("Consolas", 13, "bold"), relief="flat", padx=30, pady=10, cursor="hand2").pack(pady=6)
-        tk.Button(self.frame, text="Выход", command=root.quit, bg="#313244", fg="#cdd6f4",
-                  font=("Consolas", 11), relief="flat", padx=20, pady=6, cursor="hand2").pack(pady=10)
-
-
 class GameGUI:
     def __init__(self, root, load=False):
         self.root = root
-        self.root.title("Компьютерщик 2.0")
-        self.root.geometry("1000x900")
-        self.root.configure(bg="#1e1e2e")
-        self.root.minsize(900, 800)
+        self.root.title("Компьютерщик 2.0 — реалистичная крипто-ферма")
+        self.root.geometry("1100x950")
+        self.root.minsize(1000, 850)
 
-        self.bg = "#1e1e2e"; self.fg = "#cdd6f4"; self.accent = "#89b4fa"
-        self.green = "#a6e3a1"; self.red = "#f38ba8"; self.yellow = "#f9e2af"
-        self.surface = "#313244"; self.dark = "#181825"
+        # Цвета (если bootstrap — берём из темы)
+        if HAS_BOOTSTRAP:
+            self.bg = "#1a1a2e"
+            self.fg = "#e0e0e0"
+            self.accent = "#89b4fa"
+            self.green = "#a6e3a1"
+            self.red = "#f38ba8"
+            self.yellow = "#f9e2af"
+            self.surface = "#16213e"
+            self.dark = "#0f0f1a"
+        else:
+            self.bg = "#1e1e2e"
+            self.fg = "#cdd6f4"
+            self.accent = "#89b4fa"
+            self.green = "#a6e3a1"
+            self.red = "#f38ba8"
+            self.yellow = "#f9e2af"
+            self.surface = "#313244"
+            self.dark = "#181825"
 
         self.init_state()
         if load: self.load_game()
@@ -122,7 +115,7 @@ class GameGUI:
         self.update_ui()
         self.animate_chart()
         self.log_msg(f"--- ДЕНЬ {self.day} ---")
-        self.log_msg("Открой МАГАЗИН и собери ферму: плата, CPU, RAM, БП, GPU.")
+        self.log_msg("Игра бессрочная. Собери ферму и торгуй BTC, пока не выгоришь или не разбогатеешь.")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -132,10 +125,14 @@ class GameGUI:
         self.energy = 100
         self.stress = 20
         self.crypto_balance = 0.0
+        # Стартовый курс BTC ~5.4 млн ₽ (≈ $60k при курсе 90₽/$)
         self.btc_price_rub = 5386778.85
         self.price_history = [self.btc_price_rub] * 14
-        self.trend = 0.0
-        self.volatility = 0.02
+        # Параметры реалистичной модели
+        self.market_phase = "neutral"   # "bull", "bear", "neutral"
+        self.phase_days_left = random.randint(20, 60)  # Длительность фазы
+        self.base_volatility = 0.022    # ~2.2% дневная волатильность (2025)
+        self.trend_strength = 0.0       # Наклон тренда
         self.neighbor_patience = 100
         self.balcony = False
         self.garage = False
@@ -179,7 +176,7 @@ class GameGUI:
         except Exception as e:
             print("Ошибка загрузки:", e)
 
-    # ---- Расчёты ----
+    # ---- Расчёты мощности ----
     def calc_power(self, mb=None, cpu=None, ram=None, extra_gpu=None):
         power = 20
         m = mb if mb is not None else self.mb
@@ -278,35 +275,40 @@ class GameGUI:
 
     # ---- UI ----
     def build_ui(self):
+        # Верхняя панель
         top = tk.Frame(self.root, bg=self.bg)
-        top.pack(fill="x", padx=12, pady=6)
-        self.lbl_day = tk.Label(top, text="", fg=self.accent, bg=self.bg, font=("Consolas", 13, "bold"))
+        top.pack(fill="x", padx=15, pady=8)
+        self.lbl_day = tk.Label(top, text="", fg=self.accent, bg=self.bg, font=("Consolas", 14, "bold"))
         self.lbl_day.pack(side="left")
-        self.lbl_money = tk.Label(top, text="", fg=self.green, bg=self.bg, font=("Consolas", 13))
-        self.lbl_money.pack(side="left", padx=22)
-        self.lbl_energy = tk.Label(top, text="", fg=self.yellow, bg=self.bg, font=("Consolas", 13))
-        self.lbl_energy.pack(side="left", padx=22)
-        self.lbl_stress = tk.Label(top, text="", fg=self.red, bg=self.bg, font=("Consolas", 13))
-        self.lbl_stress.pack(side="left", padx=22)
+        self.lbl_money = tk.Label(top, text="", fg=self.green, bg=self.bg, font=("Consolas", 14))
+        self.lbl_money.pack(side="left", padx=25)
+        self.lbl_energy = tk.Label(top, text="", fg=self.yellow, bg=self.bg, font=("Consolas", 14))
+        self.lbl_energy.pack(side="left", padx=25)
+        self.lbl_stress = tk.Label(top, text="", fg=self.red, bg=self.bg, font=("Consolas", 14))
+        self.lbl_stress.pack(side="left", padx=25)
 
+        # Шкалы
         bars = tk.Frame(self.root, bg=self.bg)
-        bars.pack(fill="x", padx=12, pady=4)
+        bars.pack(fill="x", padx=15, pady=4)
         self.bar_energy = self._make_bar(bars, "ЭНЕРГИЯ", self.yellow)
         self.bar_stress = self._make_bar(bars, "СТРЕСС", self.red)
         self.bar_neighbor = self._make_bar(bars, "СОСЕД", self.accent)
 
+        # Инфо
         info = tk.Frame(self.root, bg=self.bg)
-        info.pack(fill="x", padx=12, pady=6)
+        info.pack(fill="x", padx=15, pady=6)
         self.lbl_farm = tk.Label(info, text="", fg=self.fg, bg=self.bg, font=("Consolas", 11), justify="left")
         self.lbl_farm.pack(side="left")
         self.lbl_crypto = tk.Label(info, text="", fg=self.accent, bg=self.bg, font=("Consolas", 11), justify="right")
         self.lbl_crypto.pack(side="right")
 
-        self.chart = tk.Canvas(self.root, height=180, bg=self.dark, highlightthickness=0)
-        self.chart.pack(fill="x", padx=12, pady=6)
+        # График (увеличен)
+        self.chart = tk.Canvas(self.root, height=220, bg=self.dark, highlightthickness=0)
+        self.chart.pack(fill="x", padx=15, pady=8)
 
+        # Кнопки
         btns = tk.Frame(self.root, bg=self.bg)
-        btns.pack(fill="x", padx=12, pady=6)
+        btns.pack(fill="x", padx=15, pady=8)
         actions = [
             ("Работать (+5000)", lambda: self.action(self.work)),
             ("Отдохнуть", lambda: self.action(self.rest)),
@@ -319,19 +321,24 @@ class GameGUI:
             ("Сохранить", self.save_game),
         ]
         for i, (t, c) in enumerate(actions):
-            tk.Button(btns, text=t, command=c, bg=self.surface, fg=self.fg,
-                      font=("Consolas", 10), relief="flat", padx=8, pady=6,
-                      cursor="hand2").grid(row=i//3, column=i%3, padx=3, pady=3, sticky="ew")
+            if HAS_BOOTSTRAP:
+                b = tb.Button(btns, text=t, command=c, bootstyle="secondary", width=18)
+            else:
+                b = tk.Button(btns, text=t, command=c, bg=self.surface, fg=self.fg,
+                              font=("Consolas", 10), relief="flat", padx=8, pady=6,
+                              cursor="hand2")
+            b.grid(row=i//3, column=i%3, padx=4, pady=4, sticky="ew")
         for c in range(3): btns.grid_columnconfigure(c, weight=1)
 
-        self.log = tk.Text(self.root, height=7, bg=self.dark, fg=self.fg, font=("Consolas", 10),
+        # Лог
+        self.log = tk.Text(self.root, height=8, bg=self.dark, fg=self.fg, font=("Consolas", 10),
                            relief="flat", state="disabled", wrap="word")
-        self.log.pack(fill="both", expand=True, padx=12, pady=6)
+        self.log.pack(fill="both", expand=True, padx=15, pady=8)
 
     def _make_bar(self, parent, label, color):
         f = tk.Frame(parent, bg=self.bg); f.pack(fill="x", pady=2)
-        tk.Label(f, text=label, fg=color, bg=self.bg, width=10, anchor="w", font=("Consolas", 9)).pack(side="left")
-        c = tk.Canvas(f, height=16, bg=self.surface, highlightthickness=0)
+        tk.Label(f, text=label, fg=color, bg=self.bg, width=12, anchor="w", font=("Consolas", 9)).pack(side="left")
+        c = tk.Canvas(f, height=18, bg=self.surface, highlightthickness=0)
         c.pack(side="left", fill="x", expand=True)
         return c
 
@@ -340,7 +347,7 @@ class GameGUI:
             self.shop_win.lift(); self.build_shop(); return
         self.shop_win = tk.Toplevel(self.root)
         self.shop_win.title("Магазин комплектующих")
-        self.shop_win.geometry("1050x680")
+        self.shop_win.geometry("1100x720")
         self.shop_win.configure(bg=self.bg)
         self.build_shop()
 
@@ -349,22 +356,26 @@ class GameGUI:
             return
         for w in self.shop_win.winfo_children(): w.destroy()
 
-        hdr = tk.Frame(self.shop_win, bg=self.dark); hdr.pack(fill="x", padx=10, pady=5)
+        hdr = tk.Frame(self.shop_win, bg=self.dark); hdr.pack(fill="x", padx=12, pady=6)
         total_p = self.calc_power()
         psu_str = f"{self.psu['name']} ({self.psu['wattage']}W)" if self.psu else "—"
         head_text = (
-            f"Плата: {self.mb['name'] + ' [' + self.mb['socket'] + '/' + self.mb['ram'] + ']' if self.mb else '—'}\n"
-            f"CPU: {self.cpu['name'] + ' [' + self.cpu['socket'] + ']' if self.cpu else '—'}\n"
+            f"Плата: {self.mb['name'] + ' [' + self.mb['socket'] + '/' + self.mb['ram'] + ']' if self.mb else '—'}   |   "
+            f"CPU: {self.cpu['name'] + ' [' + self.cpu['socket'] + ']' if self.cpu else '—'}   |   "
             f"RAM: {self.ram['name'] if self.ram else '—'}\n"
-            f"БП: {psu_str}\n"
-            f"Видеокарт: {len(self.gpus)}/{self.mb['max_gpu'] if self.mb else 0}\n"
+            f"БП: {psu_str}   |   Видеокарт: {len(self.gpus)}/{self.mb['max_gpu'] if self.mb else 0}   |   "
             f"Потребление: {total_p} Вт"
             + (f" / {self.psu['wattage']} Вт (запас {100-total_p/self.psu['wattage']*100:.0f}%)" if self.psu else "")
         )
         tk.Label(hdr, text=head_text, bg=self.dark, fg=self.fg, font=("Consolas", 10),
-                 justify="left", anchor="w").pack(fill="x", padx=10, pady=5)
+                 justify="left", anchor="w").pack(fill="x", padx=12, pady=6)
 
-        nb = ttk.Notebook(self.shop_win); nb.pack(fill="both", expand=True, padx=10, pady=5)
+        if HAS_BOOTSTRAP:
+            nb = tb.Notebook(self.shop_win, bootstyle="dark")
+        else:
+            nb = ttk.Notebook(self.shop_win)
+        nb.pack(fill="both", expand=True, padx=12, pady=6)
+
         for cat, items, label in [("mb", MOTHERBOARDS, "Платы"), ("cpu", CPUS, "Процессоры"),
                                    ("ram", RAMS, "Память"), ("psu", PSUS, "БП"),
                                    ("gpu", GPUS, "Видеокарты")]:
@@ -382,9 +393,9 @@ class GameGUI:
 
         if owned:
             tk.Label(frame, text="— Установлено —", bg=self.bg, fg=self.green,
-                     font=("Consolas", 10, "bold")).pack(anchor="w", padx=10, pady=(8, 3))
+                     font=("Consolas", 10, "bold")).pack(anchor="w", padx=12, pady=(10, 3))
             for o in owned:
-                r = tk.Frame(frame, bg=self.bg); r.pack(fill="x", padx=10, pady=2)
+                r = tk.Frame(frame, bg=self.bg); r.pack(fill="x", padx=12, pady=2)
                 tk.Label(r, text=self._describe(cat, o), bg=self.bg, fg=self.green,
                          font=("Consolas", 10), anchor="w").pack(side="left", fill="x", expand=True)
                 if cat == "gpu":
@@ -397,9 +408,9 @@ class GameGUI:
                               relief="flat", cursor="hand2").pack(side="right")
 
         tk.Label(frame, text="— Доступно —", bg=self.bg, fg=self.accent,
-                 font=("Consolas", 10, "bold")).pack(anchor="w", padx=10, pady=(12, 3))
+                 font=("Consolas", 10, "bold")).pack(anchor="w", padx=12, pady=(14, 3))
         for item in items:
-            row = tk.Frame(frame, bg=self.bg); row.pack(fill="x", padx=10, pady=2)
+            row = tk.Frame(frame, bg=self.bg); row.pack(fill="x", padx=12, pady=2)
             tk.Label(row, text=self._describe(cat, item), bg=self.bg, fg=self.fg,
                      font=("Consolas", 10), anchor="w").pack(side="left", fill="x", expand=True)
 
@@ -454,8 +465,6 @@ class GameGUI:
         self.apply_electricity_bill()
         self.process_random_event()
         self.refresh_chart()
-        if self.day > 30:
-            self.final(); return
         self.check_end()
         self.update_ui()
         self.save_game()
@@ -532,23 +541,59 @@ class GameGUI:
             self.log_msg("Самозанятость оформлена")
         else: error_sound(); self.log_msg("Нужно 10000₽")
 
-    # ---- Рынок ----
+    # ---- РЕАЛИСТИЧНАЯ МОДЕЛЬ ЦЕНЫ BTC ----
     def update_price(self):
-        if random.random() < 0.20:
-            self.trend = random.uniform(-0.8, 0.8)
-            self.volatility = random.uniform(0.02, 0.08)
-        drift = self.trend * 0.02
-        shock = random.gauss(0, self.volatility)
-        if random.random() < 0.04:
-            shock += random.choice([-1, 1]) * random.uniform(0.10, 0.25)
-        self.btc_price_rub *= (1 + drift + shock)
-        self.btc_price_rub = max(1000000, self.btc_price_rub)
-        self.price_history.append(self.btc_price_rub)
-        if len(self.price_history) > 14: self.price_history.pop(0)
+        # 1. Управление фазами рынка (бычий / медвежий / боковик)
+        if self.phase_days_left <= 0:
+            roll = random.random()
+            if roll < 0.35:
+                self.market_phase = "bull"
+                self.trend_strength = random.uniform(0.0005, 0.003)  # +0.05%...+0.3% в день
+                self.base_volatility = random.uniform(0.015, 0.030)
+            elif roll < 0.60:
+                self.market_phase = "bear"
+                self.trend_strength = random.uniform(-0.003, -0.0005)  # -0.3%...-0.05%
+                self.base_volatility = random.uniform(0.020, 0.040)
+            else:
+                self.market_phase = "neutral"
+                self.trend_strength = random.uniform(-0.0003, 0.0003)  # почти ноль
+                self.base_volatility = random.uniform(0.010, 0.025)
+            # Фаза длится 2-6 недель
+            self.phase_days_left = random.randint(14, 42)
 
+        self.phase_days_left -= 1
+
+        # 2. Базовое дневное изменение: тренд + случайный шум
+        daily_return = self.trend_strength + random.gauss(0, self.base_volatility)
+
+        # 3. Редкие экстремальные события ("чёрные лебеди")
+        # По статистике: 5%+ движение ~1.4 раза в месяц, 10%+ ~раз в 5 месяцев
+        roll_extreme = random.random()
+        if roll_extreme < 0.003:  # ~0.3% шанс (раз в ~330 дней) — экстремальный день 8-15%
+            daily_return += random.choice([-1, 1]) * random.uniform(0.08, 0.15)
+            self.log_msg("⚡ Резкое движение BTC! Рынок в шоке.")
+        elif roll_extreme < 0.015:  # ~1.2% шанс (раз в ~80 дней) — сильный день 4-8%
+            daily_return += random.choice([-1, 1]) * random.uniform(0.04, 0.08)
+            self.log_msg("📊 Сильное движение BTC.")
+        elif roll_extreme < 0.040:  # ~2.5% шанс — заметный день 2.5-4%
+            daily_return += random.choice([-1, 1]) * random.uniform(0.025, 0.04)
+
+        # 4. Ограничение на максимальное дневное движение (не более ~20%)
+        daily_return = max(-0.20, min(0.20, daily_return))
+
+        # 5. Применяем к цене
+        self.btc_price_rub *= (1 + daily_return)
+        self.btc_price_rub = max(500000, self.btc_price_rub)  # Пол цены
+
+        # 6. Обновляем историю для графика
+        self.price_history.append(self.btc_price_rub)
+        if len(self.price_history) > 30:
+            self.price_history.pop(0)
+
+    # ---- События ----
     def process_random_event(self):
         evs = [self.ev_bro, self.ev_neighbor, self.ev_cooler, self.ev_tax]
-        if abs(self.trend) > 0.5 and random.random() < 0.5: evs.append(self.ev_news)
+        if random.random() < 0.3: evs.append(self.ev_news)
         if self.garage: evs.append(self.ev_theft)
         if random.random() < 0.6:
             random.choice(evs)()
@@ -584,12 +629,14 @@ class GameGUI:
             self.log_msg("Налоговая: пронесло")
 
     def ev_news(self):
-        if self.trend > 0.3:
-            self.btc_price_rub *= 1.10
-            self.log_msg("Новость: BTC +10%")
+        if self.market_phase == "bull":
+            self.btc_price_rub *= 1.05
+            self.log_msg("Новость: BTC +5% (фонд покупает)")
+        elif self.market_phase == "bear":
+            self.btc_price_rub *= 0.95
+            self.log_msg("Новость: BTC -5% (регулятор давит)")
         else:
-            self.btc_price_rub *= 0.90
-            self.log_msg("Новость: BTC -10%")
+            self.log_msg("Новость: рынок без изменений")
         self.price_history[-1] = self.btc_price_rub
 
     def ev_theft(self):
@@ -603,7 +650,7 @@ class GameGUI:
 
     # ---- UI update ----
     def update_ui(self):
-        self.lbl_day.config(text=f"День {self.day}/30")
+        self.lbl_day.config(text=f"День {self.day}")
         self.lbl_money.config(text=f"{self.money}₽")
         self.lbl_energy.config(text=f"Энергия: {self.energy}")
         self.lbl_stress.config(text=f"Стресс: {self.stress}")
@@ -624,11 +671,11 @@ class GameGUI:
             f"Компоненты: {comp_str} | Потребление: {p} Вт\n"
             f"Легально: {'да' if self.legal else 'нет'} | Риск налоговой: {self.tax_risk}%"
         ))
-        trend = "бычий" if self.trend > 0.3 else "медвежий" if self.trend < -0.3 else "боковик"
+        phase_icon = "🐂" if self.market_phase == "bull" else "🐻" if self.market_phase == "bear" else "🦀"
         self.lbl_crypto.config(text=(
             f"Баланс: {self.crypto_balance:.8f} BTC\n"
             f"Курс: {self.btc_price_rub:,.0f}₽\n"
-            f"Тренд: {trend}"
+            f"Рынок: {phase_icon} {self.market_phase}"
         ))
 
     def draw_bar(self, c, v, color):
@@ -638,16 +685,18 @@ class GameGUI:
 
     def animate_chart(self):
         if self.anim_progress < self.anim_target:
-            self.anim_progress = min(self.anim_target, self.anim_progress + 0.08)
+            self.anim_progress = min(self.anim_target, self.anim_progress + 0.06)
             self.draw_chart(self.anim_progress)
         self.root.after(30, self.animate_chart)
 
     def draw_chart(self, progress=1.0):
         c = self.chart; c.delete("all"); c.update_idletasks()
         w = c.winfo_width() or 800; h = int(c.cget("height"))
-        hist = self.price_history; lo, hi = min(hist), max(hist)
+        hist = self.price_history
+        if len(hist) < 2: return
+        lo, hi = min(hist), max(hist)
         if hi - lo < 1: hi = lo + 1
-        pad = 14; points = []
+        pad = 18; points = []
         for i, p in enumerate(hist):
             x = pad + (w - 2*pad) * i / (len(hist) - 1)
             y = h - pad - (h - 2*pad) * (p - lo) / (hi - lo)
@@ -657,12 +706,16 @@ class GameGUI:
         c.create_polygon(poly, fill="#1e2a3a", outline="")
         for i in range(n-1):
             c.create_line(points[i], points[i+1], fill=self.accent, width=2)
+        # Сетка
+        for frac in [0.25, 0.5, 0.75]:
+            y = pad + (h - 2*pad) * frac
+            c.create_line(pad, y, w-pad, y, fill="#2a2a4a", dash=(2, 4))
         c.create_text(10, 10, text=f"{hi:,.0f}", fill=self.fg, anchor="nw", font=("Consolas", 9))
         c.create_text(10, h-10, text=f"{lo:,.0f}", fill=self.fg, anchor="sw", font=("Consolas", 9))
         ch = (hist[-1] / hist[0] - 1) * 100
-        c.create_text(w-10, 10, text=f"{ch:+.1f}% / 14д",
+        c.create_text(w-10, 10, text=f"{ch:+.1f}%",
                       fill=(self.green if ch >= 0 else self.red), anchor="ne",
-                      font=("Consolas", 10, "bold"))
+                      font=("Consolas", 11, "bold"))
 
     def refresh_chart(self):
         self.anim_progress = 0.0; self.anim_target = 1.0
@@ -671,34 +724,17 @@ class GameGUI:
         self.log.config(state="normal"); self.log.insert("end", t + "\n")
         self.log.see("end"); self.log.config(state="disabled")
 
-    # ---- Конец ----
+    # ---- Конец (только провал) ----
     def check_end(self):
         if self.ended: return
         if self.money < -50000:
             self.ended = True; error_sound()
-            messagebox.showinfo("Конец", "Долговая яма")
+            messagebox.showinfo("Конец", "💀 Долговая яма. Игра окончена.")
             self.save_score("Долговая яма", self.money); self.restart_prompt()
         if self.stress >= 100:
             self.ended = True; error_sound()
-            messagebox.showinfo("Конец", "Выгорание")
+            messagebox.showinfo("Конец", "💀 Выгорание. Игра окончена.")
             self.save_score("Выгорание", self.money); self.restart_prompt()
-
-    def final(self):
-        self.ended = True
-        if self.crypto_balance * self.btc_price_rub > 200000:
-            msg, t = "Крипто-магнат: квартира есть, но графики не отпускают.", "Крипто-магнат"
-        elif self.legal and len(self.gpus) >= 3 and self.money > 50000:
-            msg, t = "Легальный фермер: платишь налоги, спишь спокойно.", "Легальный фермер"
-        elif self.money < 0:
-            msg, t = "Отрицательный баланс, положительный опыт.", "Долговая яма"
-        else:
-            msg, t = "Тихая гавань: работаешь, майнишь потихоньку.", "Тихая гавань"
-        messagebox.showinfo("Итоги 30 дней", msg)
-        self.save_score(t, self.money)
-        if os.path.exists(SAVE_FILE):
-            try: os.remove(SAVE_FILE)
-            except Exception: pass
-        self.restart_prompt()
 
     def save_score(self, title, money):
         scores = []
@@ -721,7 +757,7 @@ class GameGUI:
 
 
 def show_scores(root):
-    win = tk.Toplevel(root); win.title("Рекорды"); win.geometry("650x400"); win.configure(bg="#1e1e2e")
+    win = tk.Toplevel(root); win.title("Рекорды"); win.geometry("680x400"); win.configure(bg="#1e1e2e")
     tk.Label(win, text="РЕКОРДЫ", font=("Consolas", 18, "bold"), bg="#1e1e2e", fg="#f9e2af").pack(pady=10)
     scores = []
     if os.path.exists(SCORES_FILE):
@@ -742,7 +778,11 @@ def show_scores(root):
 
 
 def main():
-    root = tk.Tk()
+    if HAS_BOOTSTRAP:
+        root = tb.Window(themename="darkly")
+    else:
+        root = tk.Tk()
+        root.configure(bg="#1e1e2e")
     make_icon(root)
 
     def start_new():
@@ -755,9 +795,26 @@ def main():
 
     def open_scores(): show_scores(root)
 
-    StartMenu(root, start_new, continue_game, open_scores)
-    root.mainloop()
+    # Стартовое меню (встроено в main, чтобы не плодить классы)
+    frame = tk.Frame(root, bg="#1e1e2e")
+    frame.pack(fill="both", expand=True)
+    tk.Label(frame, text="КОМПЬЮТЕРЩИК 2.0", font=("Consolas", 28, "bold"),
+             bg="#1e1e2e", fg="#cdd6f4").pack(pady=(60, 5))
+    tk.Label(frame, text="Бессрочная крипто-ферма с реалистичным рынком BTC",
+             font=("Consolas", 12), bg="#1e1e2e", fg="#a6adc8").pack(pady=(0, 25))
+    has_save = os.path.exists(SAVE_FILE)
+    tk.Button(frame, text="НОВАЯ ИГРА", command=start_new, bg="#89b4fa", fg="#1e1e2e",
+              font=("Consolas", 14, "bold"), relief="flat", padx=30, pady=12, cursor="hand2").pack(pady=6)
+    btn = tk.Button(frame, text="ПРОДОЛЖИТЬ", command=continue_game, bg="#a6e3a1", fg="#1e1e2e",
+                    font=("Consolas", 14, "bold"), relief="flat", padx=30, pady=12, cursor="hand2")
+    if has_save: btn.pack(pady=6)
+    else: btn.config(state="disabled", bg="#313244", fg="#585b70"); btn.pack(pady=6)
+    tk.Button(frame, text="РЕКОРДЫ", command=open_scores, bg="#f9e2af", fg="#1e1e2e",
+              font=("Consolas", 13, "bold"), relief="flat", padx=30, pady=10, cursor="hand2").pack(pady=6)
+    tk.Button(frame, text="Выход", command=root.quit, bg="#313244", fg="#cdd6f4",
+              font=("Consolas", 11), relief="flat", padx=20, pady=6, cursor="hand2").pack(pady=10)
 
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
