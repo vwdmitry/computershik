@@ -16,9 +16,9 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
       - name: Build
-        run: pyinstaller --onefile --windowed computer_guy_gui.py
+        run: pyinstaller --onefile --windowed game.py
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ComputerGuy2-EXE
-          path: dist/computer_guy_gui.exe
+          name: Game-EXE
+          path: dist/game.exe
